@@ -52,10 +52,12 @@ async def stream_with_fallback(prompt: str, preferred_model: str | None = None):
             yield ("model", model)
 
             async for chunk in llm.astream([HumanMessage(content=prompt)]):
-                # Thinking tokens — tersedia di model Gemini 2.5 / Gemma 4
+                # Thinking tokens — cek semua kemungkinan field
+                kw = chunk.additional_kwargs or {}
                 thinking = (
-                    chunk.additional_kwargs.get("thinking_content")
-                    or chunk.additional_kwargs.get("thinking")
+                    kw.get("thinking_content")
+                    or kw.get("thinking")
+                    or kw.get("thought")
                     or ""
                 )
                 if thinking:
