@@ -24,7 +24,9 @@ def retrieve_relevant_chunks(
             content=doc.page_content[:500],
             source=doc.metadata.get("source", "unknown"),
             page=doc.metadata.get("page"),
-            score=round(1 - float(score), 4),
+            # ChromaDB returns L2 distance (0=identical, higher=further).
+            # Clamp to [0,1] similarity score.
+            score=round(max(0.0, min(1.0, 1 - float(score) / 2)), 4),
         ))
 
     return docs, source_chunks
