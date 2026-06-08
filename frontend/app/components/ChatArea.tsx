@@ -23,17 +23,22 @@ export default function ChatArea({ collection }: Props) {
 
   useEffect(() => { scrollToBottom() }, [messages])
 
+  const genId = () =>
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2) + Date.now().toString(36)
+
   const send = useCallback(async () => {
     const question = input.trim()
     if (!question || isStreaming) return
 
     const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: genId(),
       role: "user",
       content: question,
     }
     const assistantMsg: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: genId(),
       role: "assistant",
       content: "",
       isStreaming: true,
