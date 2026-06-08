@@ -59,6 +59,9 @@ export default function ChatArea({ collection }: Props) {
         (token) => setMessages((prev) =>
           prev.map((m) => m.id === assistantMsg.id ? { ...m, content: m.content + token } : m)
         ),
+        (token) => setMessages((prev) =>
+          prev.map((m) => m.id === assistantMsg.id ? { ...m, thinking: (m.thinking ?? "") + token } : m)
+        ),
         (sources: SourceChunk[]) => setMessages((prev) =>
           prev.map((m) => m.id === assistantMsg.id ? { ...m, sources } : m)
         ),

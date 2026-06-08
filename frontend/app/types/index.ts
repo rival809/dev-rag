@@ -18,6 +18,7 @@ export interface ChatMessage {
   id: string
   role: "user" | "assistant"
   content: string
+  thinking?: string
   sources?: SourceChunk[]
   isStreaming?: boolean
   modelUsed?: string

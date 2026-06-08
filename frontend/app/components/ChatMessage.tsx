@@ -3,7 +3,7 @@
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import type { ChatMessage as ChatMessageType } from "@/app/types"
-import { Bot, User, ChevronDown, ChevronUp, Zap } from "lucide-react"
+import { Bot, User, ChevronDown, ChevronUp, Zap, BrainCircuit } from "lucide-react"
 import { useState } from "react"
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
 
 export default function ChatMessage({ message }: Props) {
   const [expandedSource, setExpandedSource] = useState<number | null>(null)
+  const [showThinking, setShowThinking] = useState(false)
   const isUser = message.role === "user"
 
   return (
@@ -28,7 +29,35 @@ export default function ChatMessage({ message }: Props) {
 
       {/* Bubble */}
       <div className={`max-w-[75%] space-y-2 ${isUser ? "items-end" : "items-start"} flex flex-col`}>
-        <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+
+        {/* Thinking — collapsible, hanya untuk assistant */}
+        {!isUser && message.thinking && (
+          <div className="w-full">
+            <button
+              onClick={() => setShowThinking(!showThinking)}
+              className="flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-3 py-2 text-xs text-purple-700 hover:bg-purple-100 transition-all w-full"
+            >
+              <BrainCircuit className="h-3.5 w-3.5 shrink-0 text-purple-500" />
+              <span className="font-medium">
+                {message.isStreaming && !message.content ? "Sedang berpikir..." : "Cara berpikir model"}
+              </span>
+              <span className="ml-auto">
+                {showThinking
+                  ? <ChevronUp className="h-3.5 w-3.5" />
+                  : <ChevronDown className="h-3.5 w-3.5" />
+                }
+              </span>
+            </button>
+            {showThinking && (
+              <div className="mt-1 rounded-xl border border-purple-100 bg-purple-50/50 px-4 py-3 text-xs text-slate-600 leading-relaxed whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">
+                {message.thinking}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Jawaban utama */}
+        <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed w-full ${
           isUser
             ? "rounded-tr-sm bg-blue-600 text-white"
             : "rounded-tl-sm bg-white border border-slate-200 text-slate-800"

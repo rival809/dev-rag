@@ -38,6 +38,7 @@ export const api = {
     collection: string,
     model: string | null,
     onToken: (token: string) => void,
+    onThinking: (token: string) => void,
     onSources: (sources: SourceChunk[]) => void,
     onModel: (model: string) => void,
     onDone: () => void,
@@ -64,6 +65,7 @@ export const api = {
           try {
             const payload = JSON.parse(line.slice(6))
             if (payload.type === "token") onToken(payload.data)
+            else if (payload.type === "thinking") onThinking(payload.data)
             else if (payload.type === "sources") onSources(payload.data)
             else if (payload.type === "model") onModel(payload.data)
             else if (payload.type === "done") onDone()

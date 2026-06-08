@@ -59,6 +59,8 @@ async def _stream_response(prompt: str, source_chunks, request: ChatRequest, pre
         if event_type == "model":
             model_used = data
             yield f"data: {json.dumps({'type': 'model', 'data': data})}\n\n"
+        elif event_type == "thinking":
+            yield f"data: {json.dumps({'type': 'thinking', 'data': data})}\n\n"
         elif event_type == "token":
             yield f"data: {json.dumps({'type': 'token', 'data': data})}\n\n"
         elif event_type == "error":

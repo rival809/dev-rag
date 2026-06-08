@@ -19,7 +19,6 @@ def _is_fallback_error(e: Exception) -> bool:
 
 def make_llm(model: str, streaming: bool = False) -> ChatGoogleGenerativeAI:
     settings = get_settings()
-    # Configure API key di level library — override ADC dari GCP VM
     genai.configure(api_key=settings.gemini_api_key)
     return ChatGoogleGenerativeAI(
         model=model,
@@ -30,6 +29,13 @@ def make_llm(model: str, streaming: bool = False) -> ChatGoogleGenerativeAI:
 
 
 async def stream_with_fallback(prompt: str, preferred_model: str | None = None):
+    """
+    Yield tuple:
+      ("model", model_name)
+      ("thinking", token)   — proses berpikir model
+      ("token", token)      — jawaban final
+      ("error", message)
+    """
     from langchain_core.messages import HumanMessage
     settings = get_settings()
 
@@ -44,10 +50,21 @@ async def stream_with_fallback(prompt: str, preferred_model: str | None = None):
         try:
             llm = make_llm(model, streaming=True)
             yield ("model", model)
+
             async for chunk in llm.astream([HumanMessage(content=prompt)]):
+                # Thinking tokens — tersedia di model Gemini 2.5 / Gemma 4
+                thinking = (
+                    chunk.additional_kwargs.get("thinking_content")
+                    or chunk.additional_kwargs.get("thinking")
+                    or ""
+                )
+                if thinking:
+                    yield ("thinking", thinking)
+
                 if chunk.content:
                     yield ("token", chunk.content)
             return
+
         except Exception as e:
             last_error = e
             if _is_fallback_error(e):
@@ -80,7 +97,7 @@ async def invoke_with_fallback(prompt: str, preferred_model: str | None = None) 
         except Exception as e:
             last_error = e
             if _is_fallback_error(e):
-                logger.warning(f"Model {model} gagal, coba berikutnya. Error: {e}")
+                logger.warning(f"Model {model} gagal, coba berikutnya.")
                 continue
             raise
 
