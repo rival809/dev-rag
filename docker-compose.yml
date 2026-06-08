@@ -32,14 +32,18 @@ services:
       - ./data/documents:/app/data/documents
       - ./data/vectordb:/app/data/vectordb
     environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - LLM_MODEL=${LLM_MODEL:-qwen2.5:14b}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
       - EMBED_MODEL=${EMBED_MODEL:-nomic-embed-text}
       - CHROMA_PATH=/app/data/vectordb
       - DOCS_PATH=/app/data/documents
-      - MAX_CHUNK_SIZE=1000
-      - CHUNK_OVERLAP=200
-      - TOP_K_RESULTS=5
+      - MAX_CHUNK_SIZE=${MAX_CHUNK_SIZE:-1000}
+      - CHUNK_OVERLAP=${CHUNK_OVERLAP:-200}
+      - TOP_K_RESULTS=${TOP_K_RESULTS:-5}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODELS=${GEMINI_MODELS:-gemma-4-31b-it,gemma-4-27b-it,gemini-2.5-flash,gemini-2.0-flash}
+      # Paksa library Google gunakan API key, bukan ADC dari GCP VM
+      - GOOGLE_API_KEY=${GEMINI_API_KEY}
+      - GOOGLE_GENAI_USE_VERTEXAI=false
     depends_on:
       - ollama
     deploy:
