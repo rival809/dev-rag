@@ -1,5 +1,5 @@
 import logging
-import google.auth.credentials
+import google.generativeai as genai
 from langchain_google_genai import ChatGoogleGenerativeAI
 from app.config import get_settings
 
@@ -19,13 +19,13 @@ def _is_fallback_error(e: Exception) -> bool:
 
 def make_llm(model: str, streaming: bool = False) -> ChatGoogleGenerativeAI:
     settings = get_settings()
+    # Configure API key di level library — override ADC dari GCP VM
+    genai.configure(api_key=settings.gemini_api_key)
     return ChatGoogleGenerativeAI(
         model=model,
         google_api_key=settings.gemini_api_key,
         temperature=0.1,
         streaming=streaming,
-        # Paksa pakai API key, bukan ADC/service account dari GCP VM
-        transport="rest",
     )
 
 
@@ -51,10 +51,10 @@ async def stream_with_fallback(prompt: str, preferred_model: str | None = None):
         except Exception as e:
             last_error = e
             if _is_fallback_error(e):
-                logger.warning(f"Model {model} gagal, coba model berikutnya. Error: {e}")
+                logger.warning(f"Model {model} gagal, coba berikutnya. Error: {e}")
                 continue
             else:
-                logger.error(f"Model {model} error non-retriable: {e}")
+                logger.error(f"Model {model} error: {e}")
                 yield ("error", str(e))
                 return
 
@@ -80,7 +80,7 @@ async def invoke_with_fallback(prompt: str, preferred_model: str | None = None) 
         except Exception as e:
             last_error = e
             if _is_fallback_error(e):
-                logger.warning(f"Model {model} gagal, coba model berikutnya. Error: {e}")
+                logger.warning(f"Model {model} gagal, coba berikutnya. Error: {e}")
                 continue
             raise
 
