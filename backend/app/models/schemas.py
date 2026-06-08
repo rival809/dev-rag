@@ -26,7 +26,6 @@ class ChatRequest(BaseModel):
     model: Optional[str] = None
     top_k: Optional[int] = None
     stream: bool = True
-    show_thinking: bool = False
 
 
 class SourceChunk(BaseModel):

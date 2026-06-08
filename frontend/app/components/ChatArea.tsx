@@ -5,7 +5,7 @@ import { api } from "@/app/lib/api"
 import type { ChatMessage, SourceChunk } from "@/app/types"
 import ChatMessageComponent from "./ChatMessage"
 import ChatInput from "./ChatInput"
-import { Trash2, MessageSquare, Zap, BrainCircuit } from "lucide-react"
+import { Trash2, MessageSquare, Zap } from "lucide-react"
 
 interface Props {
   collection: string
@@ -18,7 +18,6 @@ export default function ChatArea({ collection }: Props) {
   const [models, setModels] = useState<string[]>([])
   const [selectedModel, setSelectedModel] = useState<string | null>(null)
   const [activeModel, setActiveModel] = useState<string>("")
-  const [showThinking, setShowThinking] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -57,7 +56,6 @@ export default function ChatArea({ collection }: Props) {
         question,
         collection,
         selectedModel,
-        showThinking,
         (token) => setMessages((prev) =>
           prev.map((m) => m.id === assistantMsg.id ? { ...m, content: m.content + token } : m)
         ),
@@ -107,19 +105,6 @@ export default function ChatArea({ collection }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Thinking toggle */}
-          <button
-            onClick={() => setShowThinking(!showThinking)}
-            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition-all ${
-              showThinking
-                ? "border-purple-300 bg-purple-50 text-purple-700"
-                : "border-slate-200 bg-slate-50 text-slate-500 hover:border-purple-200 hover:text-purple-600"
-            }`}
-          >
-            <BrainCircuit className="h-3.5 w-3.5" />
-            {showThinking ? "Thinking ON" : "Thinking OFF"}
-          </button>
-
           {/* Model selector */}
           {models.length > 0 && (
             <div className="relative">

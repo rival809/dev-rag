@@ -37,7 +37,6 @@ export const api = {
     question: string,
     collection: string,
     model: string | null,
-    showThinking: boolean,
     onToken: (token: string) => void,
     onThinking: (token: string) => void,
     onSources: (sources: SourceChunk[]) => void,
@@ -48,7 +47,7 @@ export const api = {
     fetch(`${BASE}/api/chat/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, collection, model, stream: true, show_thinking: showThinking }),
+      body: JSON.stringify({ question, collection, model, stream: true }),
       signal,
     }).then(async (res) => {
       if (!res.ok) {

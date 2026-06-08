@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from app.models.schemas import ChatRequest, ChatResponse
 from app.core.retriever import retrieve_relevant_chunks, build_context
-from app.core.llm import stream_with_fallback, invoke_with_fallback, SYSTEM_PROMPT
+from app.core.llm import stream_with_fallback, invoke_with_fallback, build_messages
 from app.core.vectorstore import list_collections
 from app.config import get_settings
 
@@ -32,16 +32,16 @@ async def ask_question(request: ChatRequest):
         raise HTTPException(404, "Tidak ada dokumen relevan ditemukan untuk pertanyaan ini.")
 
     context = build_context(docs)
-    prompt = SYSTEM_PROMPT.format(context=context, question=request.question)
-    preferred = getattr(request, "model", None)
+    messages = build_messages(context, request.question)
+    preferred = request.model
 
     if request.stream:
         return StreamingResponse(
-            _stream_response(prompt, source_chunks, request, preferred),
+            _stream_response(messages, source_chunks, request, preferred),
             media_type="text/event-stream",
         )
 
-    answer, model_used = await invoke_with_fallback(prompt, preferred, request.show_thinking)
+    answer, model_used = await invoke_with_fallback(messages, preferred)
     return ChatResponse(
         answer=answer,
         sources=source_chunks,
@@ -50,17 +50,15 @@ async def ask_question(request: ChatRequest):
     )
 
 
-async def _stream_response(prompt: str, source_chunks, request: ChatRequest, preferred: str | None):
+async def _stream_response(messages: list, source_chunks, request: ChatRequest, preferred: str | None):
     sources_data = [s.model_dump() for s in source_chunks]
     yield f"data: {json.dumps({'type': 'sources', 'data': sources_data})}\n\n"
 
     model_used = None
-    async for event_type, data in stream_with_fallback(prompt, preferred, request.show_thinking):
+    async for event_type, data in stream_with_fallback(messages, preferred):
         if event_type == "model":
             model_used = data
             yield f"data: {json.dumps({'type': 'model', 'data': data})}\n\n"
-        elif event_type == "thinking":
-            yield f"data: {json.dumps({'type': 'thinking', 'data': data})}\n\n"
         elif event_type == "token":
             yield f"data: {json.dumps({'type': 'token', 'data': data})}\n\n"
         elif event_type == "error":
