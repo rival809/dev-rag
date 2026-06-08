@@ -17,7 +17,7 @@ def _is_fallback_error(e: Exception) -> bool:
     return any(k in msg for k in _FALLBACK_ERRORS)
 
 
-def make_llm(model: str, streaming: bool = False) -> ChatGoogleGenerativeAI:
+def make_llm(model: str, streaming: bool = False, show_thinking: bool = False) -> ChatGoogleGenerativeAI:
     settings = get_settings()
     genai.configure(api_key=settings.gemini_api_key)
     return ChatGoogleGenerativeAI(
@@ -25,10 +25,12 @@ def make_llm(model: str, streaming: bool = False) -> ChatGoogleGenerativeAI:
         google_api_key=settings.gemini_api_key,
         temperature=0.1,
         streaming=streaming,
+        # thinking_budget=0 matikan thinking, -1 biarkan model putuskan sendiri
+        thinking_budget=-1 if show_thinking else 0,
     )
 
 
-async def stream_with_fallback(prompt: str, preferred_model: str | None = None):
+async def stream_with_fallback(prompt: str, preferred_model: str | None = None, show_thinking: bool = False):
     """
     Yield tuple:
       ("model", model_name)
@@ -48,7 +50,7 @@ async def stream_with_fallback(prompt: str, preferred_model: str | None = None):
     last_error = None
     for model in models:
         try:
-            llm = make_llm(model, streaming=True)
+            llm = make_llm(model, streaming=True, show_thinking=show_thinking)
             yield ("model", model)
 
             async for chunk in llm.astream([HumanMessage(content=prompt)]):
@@ -80,7 +82,7 @@ async def stream_with_fallback(prompt: str, preferred_model: str | None = None):
     yield ("error", f"Semua model gagal. Error terakhir: {last_error}")
 
 
-async def invoke_with_fallback(prompt: str, preferred_model: str | None = None) -> tuple[str, str]:
+async def invoke_with_fallback(prompt: str, preferred_model: str | None = None, show_thinking: bool = False) -> tuple[str, str]:
     from langchain_core.messages import HumanMessage
     settings = get_settings()
 
@@ -93,7 +95,7 @@ async def invoke_with_fallback(prompt: str, preferred_model: str | None = None) 
     last_error = None
     for model in models:
         try:
-            llm = make_llm(model, streaming=False)
+            llm = make_llm(model, streaming=False, show_thinking=show_thinking)
             response = await llm.ainvoke([HumanMessage(content=prompt)])
             return response.content, model
         except Exception as e:

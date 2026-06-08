@@ -23,9 +23,10 @@ class IngestResponse(BaseModel):
 class ChatRequest(BaseModel):
     question: str
     collection: str = "default"
-    model: Optional[str] = None  # None = pakai urutan fallback dari config
+    model: Optional[str] = None
     top_k: Optional[int] = None
     stream: bool = True
+    show_thinking: bool = False
 
 
 class SourceChunk(BaseModel):

@@ -41,7 +41,7 @@ async def ask_question(request: ChatRequest):
             media_type="text/event-stream",
         )
 
-    answer, model_used = await invoke_with_fallback(prompt, preferred)
+    answer, model_used = await invoke_with_fallback(prompt, preferred, request.show_thinking)
     return ChatResponse(
         answer=answer,
         sources=source_chunks,
@@ -55,7 +55,7 @@ async def _stream_response(prompt: str, source_chunks, request: ChatRequest, pre
     yield f"data: {json.dumps({'type': 'sources', 'data': sources_data})}\n\n"
 
     model_used = None
-    async for event_type, data in stream_with_fallback(prompt, preferred):
+    async for event_type, data in stream_with_fallback(prompt, preferred, request.show_thinking):
         if event_type == "model":
             model_used = data
             yield f"data: {json.dumps({'type': 'model', 'data': data})}\n\n"
