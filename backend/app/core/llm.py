@@ -12,7 +12,9 @@ _FALLBACK_ERRORS = (
     "model not found", "404",
 )
 
-SYSTEM_INSTRUCTION = """Anda adalah asisten AI yang menjawab pertanyaan berdasarkan dokumen yang diberikan.
+_MARKER = "<<RAG_ANSWER>>"
+
+SYSTEM_INSTRUCTION = f"""Anda adalah asisten AI yang menjawab pertanyaan berdasarkan dokumen yang diberikan.
 
 Aturan:
 - Jawab HANYA berdasarkan konteks dokumen yang diberikan
@@ -21,8 +23,9 @@ Aturan:
 - Sebutkan sumber dokumen yang relevan
 - Gunakan daftar bernomor jika ada beberapa poin penting
 
-PENTING: Mulai jawaban Anda dengan penanda [JAWABAN] diikuti langsung oleh isi jawaban.
-Contoh: [JAWABAN] Berdasarkan dokumen..."""
+OUTPUT FORMAT: Tulis hanya penanda berikut lalu langsung jawaban, tidak ada teks lain sebelumnya:
+{_MARKER}
+<isi jawaban di sini>"""
 
 
 def _is_fallback_error(e: Exception) -> bool:
@@ -57,8 +60,6 @@ async def stream_with_fallback(messages: list, preferred_model: str | None = Non
     elif preferred_model:
         models = [preferred_model] + models
 
-    MARKER = "[JAWABAN]"
-
     last_error = None
     for model in models:
         try:
@@ -78,16 +79,15 @@ async def stream_with_fallback(messages: list, preferred_model: str | None = Non
                     continue
 
                 buffer += token
-                idx = buffer.find(MARKER)
+                idx = buffer.find(_MARKER)
                 if idx != -1:
-                    # Buang semua sebelum marker, emit sesudahnya
-                    after_marker = buffer[idx + len(MARKER):]
-                    if after_marker.lstrip():
-                        yield ("token", after_marker.lstrip("\n "))
+                    after = buffer[idx + len(_MARKER):].lstrip("\n ")
+                    if after:
+                        yield ("token", after)
                     answer_started = True
                     buffer = ""
 
-            # Jika marker tidak muncul sama sekali, emit buffer sebagai jawaban
+            # Fallback: marker tidak muncul, emit semua (sudah tanpa thinking)
             if not answer_started and buffer.strip():
                 yield ("token", buffer.strip())
 
@@ -115,17 +115,15 @@ async def invoke_with_fallback(messages: list, preferred_model: str | None = Non
     elif preferred_model:
         models = [preferred_model] + models
 
-    MARKER = "[JAWABAN]"
-
     last_error = None
     for model in models:
         try:
             llm = make_llm(model, streaming=False)
             response = await llm.ainvoke(messages)
             content = response.content
-            idx = content.find(MARKER)
+            idx = content.find(_MARKER)
             if idx != -1:
-                content = content[idx + len(MARKER):].lstrip("\n ")
+                content = content[idx + len(_MARKER):].lstrip("\n ")
             return content, model
         except Exception as e:
             last_error = e
