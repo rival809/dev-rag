@@ -8,7 +8,9 @@ class Settings(BaseSettings):
 
     # Model list — urutan prioritas, dipisah koma
     # Fallback otomatis jika model pertama kena rate limit / error
-    gemini_models: str = "gemini-2.5-flash,gemini-2.0-flash,gemini-2.5-flash-lite"
+    # Gemma 4: Unlimited TPM, 1.5K RPD — jauh lebih besar dari Gemini Flash (20 RPD)
+    # Gemini Flash sebagai fallback terakhir jika Gemma tidak tersedia
+    gemini_models: str = "gemma-4-31b-it,gemma-4-27b-it,gemini-2.5-flash,gemini-2.0-flash"
 
     # Ollama (embedding saja)
     ollama_base_url: str = "http://localhost:11434"
