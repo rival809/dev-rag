@@ -11,7 +11,10 @@ router = APIRouter(prefix="/status", tags=["status"])
 async def get_status():
     settings = get_settings()
 
-    # Cek koneksi Ollama
+    # Cek Gemini API key tersedia
+    gemini_ok = bool(settings.gemini_api_key)
+
+    # Cek Ollama (untuk embedding)
     ollama_ok = False
     try:
         async with httpx.AsyncClient(timeout=5) as client:
@@ -27,9 +30,9 @@ async def get_status():
         total_docs += stats["document_count"]
 
     return StatusResponse(
-        status="ok" if ollama_ok else "degraded",
+        status="ok" if (gemini_ok and ollama_ok) else "degraded",
         ollama_connected=ollama_ok,
-        llm_model=settings.llm_model,
+        llm_model=settings.gemini_model,
         embed_model=settings.embed_model,
         collections=collections,
         total_documents=total_docs,

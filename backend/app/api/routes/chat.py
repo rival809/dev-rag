@@ -1,11 +1,12 @@
 import json
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage
 from app.models.schemas import ChatRequest, ChatResponse
 from app.core.retriever import retrieve_relevant_chunks, build_context
 from app.core.llm import get_llm, SYSTEM_PROMPT
 from app.core.vectorstore import list_collections
+from app.config import get_settings
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -36,31 +37,26 @@ async def ask_question(request: ChatRequest):
 
     llm = get_llm(streaming=False)
     response = llm.invoke([HumanMessage(content=prompt)])
-    settings_model = get_llm().model
+    settings = get_settings()
 
     return ChatResponse(
         answer=response.content,
         sources=source_chunks,
         collection=request.collection,
-        model_used=settings_model,
+        model_used=settings.gemini_model,
     )
 
 
 async def _stream_response(prompt: str, source_chunks, request: ChatRequest):
-    from langchain_core.messages import HumanMessage
+    settings = get_settings()
     llm = get_llm(streaming=True)
 
-    # Kirim sources dulu
     sources_data = [s.model_dump() for s in source_chunks]
     yield f"data: {json.dumps({'type': 'sources', 'data': sources_data})}\n\n"
 
-    # Stream token LLM
-    full_answer = ""
     async for chunk in llm.astream([HumanMessage(content=prompt)]):
         token = chunk.content
         if token:
-            full_answer += token
             yield f"data: {json.dumps({'type': 'token', 'data': token})}\n\n"
 
-    # Kirim done signal
-    yield f"data: {json.dumps({'type': 'done', 'collection': request.collection, 'model': llm.model})}\n\n"
+    yield f"data: {json.dumps({'type': 'done', 'collection': request.collection, 'model': settings.gemini_model})}\n\n"

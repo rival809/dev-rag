@@ -1,18 +1,14 @@
-from langchain_ollama import ChatOllama
+from langchain_google_genai import ChatGoogleGenerativeAI
 from app.config import get_settings
 
-_llm = None
 
-
-def get_llm(streaming: bool = False) -> ChatOllama:
-    global _llm
+def get_llm(streaming: bool = False) -> ChatGoogleGenerativeAI:
     settings = get_settings()
-    return ChatOllama(
-        base_url=settings.ollama_base_url,
-        model=settings.llm_model,
+    return ChatGoogleGenerativeAI(
+        model=settings.gemini_model,
+        google_api_key=settings.gemini_api_key,
         temperature=0.1,
         streaming=streaming,
-        num_ctx=8192,
     )
 
 
