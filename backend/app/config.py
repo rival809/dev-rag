@@ -5,7 +5,7 @@ from functools import lru_cache
 class Settings(BaseSettings):
     # Gemini
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-2.5-flash"
 
     # Ollama (untuk embedding saja)
     ollama_base_url: str = "http://localhost:11434"
