@@ -26,8 +26,8 @@ services:
       dockerfile: Dockerfile
     container_name: rag-backend
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     volumes:
       - ./data/documents:/app/data/documents
       - ./data/vectordb:/app/data/vectordb
@@ -55,11 +55,9 @@ services:
       dockerfile: Dockerfile
     container_name: rag-frontend
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     environment:
-      - BACKEND_URL=http://backend:8000
-      - NEXT_PUBLIC_API_URL=http://backend:8000
       - NODE_ENV=production
     depends_on:
       - backend
@@ -67,6 +65,33 @@ services:
       resources:
         limits:
           memory: 1G
+    networks:
+      - rag-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: rag-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certbot/conf:/etc/letsencrypt:ro
+      - ./nginx/certbot/www:/var/www/certbot:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - rag-network
+
+  certbot:
+    image: certbot/certbot
+    container_name: rag-certbot
+    volumes:
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done;'"
     networks:
       - rag-network
 

@@ -1,6 +1,8 @@
 import type { DocumentInfo, SystemStatus, IngestResponse, CollectionInfo, SourceChunk } from "@/app/types"
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+// Selalu gunakan relative URL — Nginx yang routing /api/* ke backend.
+// Otomatis bekerja di HTTP maupun HTTPS tanpa perubahan config.
+const BASE = ""
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { cache: "no-store" })
