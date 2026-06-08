@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import StatusBar from "./components/StatusBar"
 import CollectionSelector from "./components/CollectionSelector"
 import UploadZone from "./components/UploadZone"
 import DocumentList from "./components/DocumentList"
@@ -20,7 +19,7 @@ export default function Home() {
       <aside className="flex w-72 shrink-0 flex-col border-r border-slate-200 bg-white">
         {/* Logo */}
         <div className="border-b border-slate-200 p-5">
-          <div className="mb-4 flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600">
               <BrainCircuit className="h-5 w-5 text-white" />
             </div>
@@ -29,7 +28,6 @@ export default function Home() {
               <p className="text-xs text-slate-500">Asisten Dokumen AI</p>
             </div>
           </div>
-          <StatusBar />
         </div>
 
         {/* Controls */}
