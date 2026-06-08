@@ -1,7 +1,5 @@
 import type { DocumentInfo, SystemStatus, IngestResponse, CollectionInfo, SourceChunk } from "@/app/types"
 
-// Selalu gunakan relative URL — Nginx yang routing /api/* ke backend.
-// Otomatis bekerja di HTTP maupun HTTPS tanpa perubahan config.
 const BASE = ""
 
 async function get<T>(path: string): Promise<T> {
@@ -17,6 +15,8 @@ export const api = {
     get<DocumentInfo[]>(`/api/documents/list${collection ? `?collection=${collection}` : ""}`),
 
   listCollections: () => get<CollectionInfo[]>("/api/documents/collections"),
+
+  listModels: () => get<{ models: string[]; primary: string }>("/api/chat/models"),
 
   deleteDocument: (collection: string, filename: string) =>
     fetch(`${BASE}/api/documents/${collection}/${encodeURIComponent(filename)}`, {
@@ -36,15 +36,17 @@ export const api = {
   streamChat: (
     question: string,
     collection: string,
+    model: string | null,
     onToken: (token: string) => void,
     onSources: (sources: SourceChunk[]) => void,
+    onModel: (model: string) => void,
     onDone: () => void,
     signal?: AbortSignal,
   ) =>
     fetch(`${BASE}/api/chat/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, collection, stream: true }),
+      body: JSON.stringify({ question, collection, model, stream: true }),
       signal,
     }).then(async (res) => {
       if (!res.ok) {
@@ -63,8 +65,12 @@ export const api = {
             const payload = JSON.parse(line.slice(6))
             if (payload.type === "token") onToken(payload.data)
             else if (payload.type === "sources") onSources(payload.data)
+            else if (payload.type === "model") onModel(payload.data)
             else if (payload.type === "done") onDone()
-          } catch {}
+            else if (payload.type === "error") throw new Error(payload.data)
+          } catch (e) {
+            if (e instanceof Error && e.message !== "JSON parse error") throw e
+          }
         }
       }
     }),

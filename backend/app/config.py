@@ -3,11 +3,14 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    # Gemini
+    # Gemini API
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
 
-    # Ollama (untuk embedding saja)
+    # Model list — urutan prioritas, dipisah koma
+    # Fallback otomatis jika model pertama kena rate limit / error
+    gemini_models: str = "gemini-2.5-flash,gemini-2.0-flash,gemini-2.5-flash-lite"
+
+    # Ollama (embedding saja)
     ollama_base_url: str = "http://localhost:11434"
     embed_model: str = "nomic-embed-text"
 
@@ -19,6 +22,14 @@ class Settings(BaseSettings):
     max_chunk_size: int = 1000
     chunk_overlap: int = 200
     top_k_results: int = 5
+
+    @property
+    def model_list(self) -> list[str]:
+        return [m.strip() for m in self.gemini_models.split(",") if m.strip()]
+
+    @property
+    def primary_model(self) -> str:
+        return self.model_list[0] if self.model_list else "gemini-2.5-flash"
 
     class Config:
         env_file = ".env"

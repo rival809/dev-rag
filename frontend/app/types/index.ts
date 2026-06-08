@@ -20,6 +20,7 @@ export interface ChatMessage {
   content: string
   sources?: SourceChunk[]
   isStreaming?: boolean
+  modelUsed?: string
 }
 
 export interface CollectionInfo {

@@ -3,7 +3,7 @@
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import type { ChatMessage as ChatMessageType } from "@/app/types"
-import { Bot, User, ChevronDown, ChevronUp } from "lucide-react"
+import { Bot, User, ChevronDown, ChevronUp, Zap } from "lucide-react"
 import { useState } from "react"
 
 interface Props {
@@ -53,6 +53,14 @@ export default function ChatMessage({ message }: Props) {
             </div>
           )}
         </div>
+
+        {/* Model badge */}
+        {message.modelUsed && (
+          <div className="flex items-center gap-1 px-1">
+            <Zap className="h-3 w-3 text-yellow-500" />
+            <span className="text-[10px] text-slate-400">{message.modelUsed}</span>
+          </div>
+        )}
 
         {/* Sources */}
         {message.sources && message.sources.length > 0 && (

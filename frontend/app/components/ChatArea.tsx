@@ -5,7 +5,7 @@ import { api } from "@/app/lib/api"
 import type { ChatMessage, SourceChunk } from "@/app/types"
 import ChatMessageComponent from "./ChatMessage"
 import ChatInput from "./ChatInput"
-import { Trash2, MessageSquare } from "lucide-react"
+import { Trash2, MessageSquare, ChevronDown, Zap } from "lucide-react"
 
 interface Props {
   collection: string
@@ -15,64 +15,62 @@ export default function ChatArea({ collection }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const [isStreaming, setIsStreaming] = useState(false)
+  const [models, setModels] = useState<string[]>([])
+  const [selectedModel, setSelectedModel] = useState<string | null>(null)
+  const [activeModel, setActiveModel] = useState<string>("")
   const bottomRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
-
-  const scrollToBottom = () =>
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-
-  useEffect(() => { scrollToBottom() }, [messages])
 
   const genId = () =>
     typeof crypto !== "undefined" && crypto.randomUUID
       ? crypto.randomUUID()
       : Math.random().toString(36).slice(2) + Date.now().toString(36)
 
+  useEffect(() => {
+    api.listModels()
+      .then(({ models, primary }) => {
+        setModels(models)
+        setActiveModel(primary)
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
   const send = useCallback(async () => {
     const question = input.trim()
     if (!question || isStreaming) return
 
-    const userMsg: ChatMessage = {
-      id: genId(),
-      role: "user",
-      content: question,
-    }
-    const assistantMsg: ChatMessage = {
-      id: genId(),
-      role: "assistant",
-      content: "",
-      isStreaming: true,
-    }
+    const userMsg: ChatMessage = { id: genId(), role: "user", content: question }
+    const assistantMsg: ChatMessage = { id: genId(), role: "assistant", content: "", isStreaming: true }
 
     setMessages((prev) => [...prev, userMsg, assistantMsg])
     setInput("")
     setIsStreaming(true)
-
     abortRef.current = new AbortController()
 
     try {
       await api.streamChat(
         question,
         collection,
-        (token) => {
+        selectedModel,
+        (token) => setMessages((prev) =>
+          prev.map((m) => m.id === assistantMsg.id ? { ...m, content: m.content + token } : m)
+        ),
+        (sources: SourceChunk[]) => setMessages((prev) =>
+          prev.map((m) => m.id === assistantMsg.id ? { ...m, sources } : m)
+        ),
+        (model) => {
+          setActiveModel(model)
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsg.id ? { ...m, content: m.content + token } : m
-            )
-          )
-        },
-        (sources: SourceChunk[]) => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsg.id ? { ...m, sources } : m
-            )
+            prev.map((m) => m.id === assistantMsg.id ? { ...m, modelUsed: model } : m)
           )
         },
         () => {
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsg.id ? { ...m, isStreaming: false } : m
-            )
+            prev.map((m) => m.id === assistantMsg.id ? { ...m, isStreaming: false } : m)
           )
           setIsStreaming(false)
         },
@@ -81,22 +79,16 @@ export default function ChatArea({ collection }: Props) {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Terjadi kesalahan"
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMsg.id
-            ? { ...m, content: `❌ ${msg}`, isStreaming: false }
-            : m
-        )
+        prev.map((m) => m.id === assistantMsg.id ? { ...m, content: `❌ ${msg}`, isStreaming: false } : m)
       )
       setIsStreaming(false)
     }
-  }, [input, isStreaming, collection])
+  }, [input, isStreaming, collection, selectedModel])
 
   const stop = () => {
     abortRef.current?.abort()
     setIsStreaming(false)
-    setMessages((prev) =>
-      prev.map((m) => m.isStreaming ? { ...m, isStreaming: false } : m)
-    )
+    setMessages((prev) => prev.map((m) => m.isStreaming ? { ...m, isStreaming: false } : m))
   }
 
   return (
@@ -109,15 +101,35 @@ export default function ChatArea({ collection }: Props) {
             Koleksi: <span className="text-blue-600 font-medium">{collection}</span>
           </p>
         </div>
-        {messages.length > 0 && (
-          <button
-            onClick={() => setMessages([])}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-500 hover:border-red-300 hover:text-red-500 transition-all"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            Bersihkan
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* Model selector */}
+          {models.length > 0 && (
+            <div className="relative">
+              <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5">
+                <Zap className="h-3.5 w-3.5 text-yellow-500" />
+                <select
+                  value={selectedModel ?? ""}
+                  onChange={(e) => setSelectedModel(e.target.value || null)}
+                  className="bg-transparent text-xs text-slate-700 focus:outline-none cursor-pointer pr-1"
+                >
+                  <option value="">Auto (fallback)</option>
+                  {models.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+          {messages.length > 0 && (
+            <button
+              onClick={() => setMessages([])}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-500 hover:border-red-300 hover:text-red-500 transition-all"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Bersihkan
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Messages */}
@@ -165,7 +177,11 @@ export default function ChatArea({ collection }: Props) {
           isStreaming={isStreaming}
         />
         <p className="mt-2 text-center text-[10px] text-slate-400">
-          Jawaban berdasarkan dokumen yang diupload · Model lokal CPU
+          {activeModel ? (
+            <>Menggunakan <span className="font-medium text-slate-500">{activeModel}</span> · fallback otomatis jika rate-limit</>
+          ) : (
+            "Jawaban berdasarkan dokumen yang diupload"
+          )}
         </p>
       </div>
     </div>
